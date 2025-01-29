@@ -3,18 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Flash</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Global News</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/704ff50790.js" crossorigin="anonymous"></script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .dark { background-color: #1a202c; color: white; }
+        #articles-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+    </style>
 </head>
-<body>
-    <header>
-        <h1>News Flash</h1>
-    </header>
+<body class="bg-gray-50 text-black min-h-screen">
 
-    <main>
-        <div id="news-container"></div>
-    </main>
+<header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto">
+        <div class="border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between p-4">
+                <button id="menu-button" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="text-3xl font-serif font-bold">Global News</h1>
+                <div class="flex items-center space-x-4">
+                    <button id="dark-mode-toggle" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                        <i class="fas fa-sun" id="sun-icon"></i>
+                        <i class="fas fa-moon" id="moon-icon" style="display: none;"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <nav id="category-nav" class="flex items-center justify-center p-4 space-x-8 bg-gray-100 dark:bg-gray-700"></nav>
+    </div>
+</header>
 
-    <script src="script.js"></script>
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div id="loading" class="text-center py-8 hidden">
+        <i class="fas fa-spinner fa-spin text-4xl"></i>
+        <p class="mt-2">Loading news...</p>
+    </div>
+    <div id="error" class="text-center py-8 text-red-600 hidden">
+        <i class="fas fa-exclamation-circle text-4xl"></i>
+        <p class="mt-2">Failed to load news. Please try again later.</p>
+    </div>
+    <div id="articles-container"></div>
+</main>
+
+<script>
+    const API_KEY = "pub_66577ba85a32fc2ce6428f0acb27b05ba37f4";
+    const BASE_URL = "https://newsdata.io/api/1/news";
+    let activeCategory = 'Top Stories';
+    let darkMode = false;
+
+    // Dark mode toggle
+    document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+        darkMode = !darkMode;
+        document.body.classList.toggle('dark', darkMode);
+        document.getElementById('sun-icon').style.display = darkMode ? 'none' : 'block';
+        document.getElementById('moon-icon').style.display = darkMode ? 'block' : 'none';
+    });
+
+    const categories = ['Top Stories', 'Business', 'Technology', 'Politics', 'World'];
+    
+    function setupCategories() {
+        const nav = document.getElementById('category-nav');
+        categories.forEach(category => {
+            const button = document.createElement('button');
+            button.textContent = category;
+            button.className = `px-3 py-2 text-sm font-medium rounded-md transition-all text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 ${activeCategory === category ? 'bg-gray-200 dark:bg-gray-600' : ''}`;
+            button.addEventListener('click', () => {
+                document.querySelectorAll('#category-nav button').forEach(btn => {
+                    btn.classList.remove('bg-gray-200', 'dark:bg-gray-600');
+                });
+                button.classList.add('bg-gray-200', 'dark:bg-gray-600');
+                activeCategory = category;
+                fetchNews();
+            });
+            nav.appendChild(button);
+        });
+    }
+
+    async function fetchNews() {
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const container = document.getElementById('articles-container');
+
+        loading.classList.remove('hidden');
+        error.classList.add('hidden');
+        container.innerHTML = '';
+
+        try {
+            const categoryParam = activeCategory === 'Top Stories' ? '' : `&category=${activeCategory.toLowerCase()}`;
+            const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&language=en${categoryParam}`);
+            const data = await response.json();
+            
+            if (!response.ok) throw new Error('Failed to fetch news');
+            
+            loading.classList.add('hidden');
+            displayArticles(data.results || []);
+        } catch (error) {
+            console.error("Error fetching news:", error);
+            loading.classList.add('hidden');
+            error.classList.remove('hidden');
+        }
+    }
+
+    function displayArticles(articles) {
+        const container = document.getElementById('articles-container');
+        
+        if (articles.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-newspaper text-4xl"></i>
+                    <p class="mt-2">No articles found for this category.</p>
+                </div>
+            `;
+            return;
+        }
+
+        articles.forEach((article, index) => {
+            const articleElement = document.createElement('article');
+            articleElement.className = `bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden transform transition duration-300 hover:scale-105`;
+            
+            const imageUrl = article.image_url || '/api/placeholder/400/300';
+            
+            articleElement.innerHTML = `
+                <img src="${imageUrl}" alt="${article.title}" class="w-full h-60 object-cover" loading="lazy" onerror="this.src='/api/placeholder/400/300'">
+                <div class="p-6">
+                    <span class="text-sm font-medium text-blue-600">${article.category || 'General'}</span>
+                    <h3 class="text-xl font-bold mt-2 mb-3">${article.title}</h3>
+                    <p class="text-gray-600 dark:text-gray-300 mb-4">${article.description || 'No description available'}</p>
+                    <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                        <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400">Read More →</a>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(articleElement);
+        });
+    }
+
+    setupCategories();
+    fetchNews();
+</script>
+
 </body>
 </html>
