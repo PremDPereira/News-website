@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NewsFlash</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5; /* Updated primary color */
+            --secondary-color: #3b82f6; /* Updated secondary color */
+            --text-color: #1f2937;
+            --bg-color: #f9fafb; /* Updated background color */
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            overflow-y: scroll; /* Enable vertical scrolling */
+        }
+
+        body.dark-mode {
+            --primary-color: #3b82f6;
+            --secondary-color: #60a5fa;
+            --text-color: #f3f4f6;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+        }
+
+        .navbar {
+            background: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .notebook-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: var(--card-bg);
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notebook-panel.open {
+            right: 0;
+        }
+
+        .feature-button {
+            padding: 0.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .news-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .news-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .search-bar {
+            background: var(--card-bg);
+            border: 2px solid var(--primary-color);
+        }
+
+        .advanced-search-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .advanced-search-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        #notesArea {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--primary-color);
+        }
+
+        #notesArea::placeholder {
+            color: #9ca3af;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+
+        /* Go to Top Button */
+        #goToTop {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #goToTop:hover {
+            background: var(--secondary-color);
+        }
+
+        /* Bold Text */
+        .bold-text {
+            font-weight: bold;
+        }
+
+        /* Source Tag */
+        .source-tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading-circle {
+            border: 4px solid var(--primary-color);
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Share Button Styles */
+        .share-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .share-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* Bookmark Button Styles */
+        .bookmark-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            transition: color 0.3s;
+        }
+
+        .bookmark-button:hover {
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-2xl font-bold" style="color: var(--primary-color)">NewsFlash</h1>
+                
+                <div class="flex items-center space-x-4">
+                    <button id="darkModeToggle" class="feature-button" title="Toggle Dark Mode">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+
+                    <button id="readingModeToggle" class="feature-button" title="Toggle Reading Mode">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </button>
+
+                    <button id="notebookToggle" class="feature-button" title="Toggle Notebook">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Section -->
+    <section class="pt-20 pb-10" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color))">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="search-bar rounded-lg p-2 flex items-center">
+                <input type="text" id="searchInput" 
+                       class="w-full bg-transparent placeholder-gray-400 focus:outline-none px-4"
+                       placeholder="Search for news...">
+                <button id="searchButton" 
+                        class="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+                        style="background: var(--primary-color)">
+                    Search
+                </button>
+                <button id="advancedSearchButton" class="ml-2 feature-button" title="Advanced Search">
+                    ⚙️
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Categories -->
+        <div class="flex flex-wrap gap-4 mb-8" id="categories">
+            <button class="category-button px-4 py-2 rounded-full" data-category="general">Top Stories</button>
+            <button class="category-button px-4 py-2 rounded-full" data-category="business">Business</button>
+            <button class="category-button px-4 py-2 rounded-full" data-category="technology">Technology</button>
+            <button class="category-button px-4 py-2 rounded-full" data-category="sports">Sports</button>
+            <button class="category-button px-4 py-2 rounded-full" data-category="health">Health</button>
+            <button class="category-button px-4 py-2 rounded-full" data-category="science">Science</button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="loading-circle"></div>
+            <p class="text-lg font-bold">Finding trusted and relevant news...</p>
+        </div>
+
+        <!-- News Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="newsGrid"></div>
+    </main>
+
+    <!-- Notebook Panel -->
+    <aside id="notebookPanel" class="notebook-panel">
+        <div class="p-4 h-full flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Notebook</h2>
+                <button id="closeNotebook" class="feature-button">✕</button>
+            </div>
+            <textarea id="notesArea" 
+                      class="flex-1 w-full p-4 rounded resize-none focus:outline-none"
+                      placeholder="Take notes here..."></textarea>
+            <div class="mt-4 flex justify-end">
+                <button id="saveNotes" 
+                        class="px-4 py-2 text-white rounded hover:opacity-90"
+                        style="background: var(--primary-color)">
+                    Save Notes
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Advanced Search Modal -->
+    <div id="advancedSearchModal" class="advanced-search-modal">
+        <div class="advanced-search-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Advanced Search</h2>
+                <button id="closeAdvancedSearch" class="feature-button">✕</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="advancedSearchKeyword" class="block mb-2 bold-text">Keyword</label>
+                    <input type="text" id="advancedSearchKeyword" 
+                           class="w-full p-2 border rounded"
+                           placeholder="Enter search keyword">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="advancedSearchFrom" class="block mb-2 bold-text">From Date</label>
+                        <input type="date" id="advancedSearchFrom" 
+                               class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label for="advancedSearchTo" class="block mb-2 bold-text">To Date</label>
+                        <input type="date" id="advancedSearchTo" 
+                               class="w-full p-2 border rounded">
+                    </div>
+                </div>
+                <div>
+                    <label for="advancedSearchLanguage" class="block mb-2 bold-text">Language</label>
+                    <select id="advancedSearchLanguage" 
+                            class="w-full p-2 border rounded">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="advancedSearchSortBy" class="block mb-2 bold-text">Sort By</label>
+                    <select id="advancedSearchSortBy" 
+                            class="w-full p-2 border rounded">
+                        <option value="relevancy">Relevance</option>
+                        <option value="source">Source</option>
+                    </select>
+                </div>
+                <button id="executeAdvancedSearch" 
+                        class="w-full py-2 rounded text-white"
+                        style="background: var(--primary-color)">
+                    Search
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button id="goToTop" title="Go to Top">↑</button>
+
+    <script>
+        const API_KEY = "d94ca20195d84b06b2b8565fa30b5729";
+        const CORS_PROXY = "https://api.allorigins.win/get?url=";
+
+        // Feature toggle states
+        let darkMode = localStorage.getItem('darkMode') === 'true';
+        let readingMode = localStorage.getItem('readingMode') === 'true';
+        let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
+
+        // Initialize states
+        if (darkMode) document.body.classList.add('dark-mode');
+        if (readingMode) document.body.classList.add('reading-mode');
+
+        // DOM Elements
+        const elements = {
+            darkModeToggle: document.getElementById('darkModeToggle'),
+            readingModeToggle: document.getElementById('readingModeToggle'),
+            notebookToggle: document.getElementById('notebookToggle'),
+            notebookPanel: document.getElementById('notebookPanel'),
+            closeNotebook: document.getElementById('closeNotebook'),
+            searchInput: document.getElementById('searchInput'),
+            searchButton: document.getElementById('searchButton'),
+            newsGrid: document.getElementById('newsGrid'),
+            notesArea: document.getElementById('notesArea'),
+            saveNotes: document.getElementById('saveNotes'),
+            categories: document.getElementById('categories'),
+            advancedSearchModal: document.getElementById('advancedSearchModal'),
+            closeAdvancedSearch: document.getElementById('closeAdvancedSearch'),
+            executeAdvancedSearch: document.getElementById('executeAdvancedSearch'),
+            advancedSearchKeyword: document.getElementById('advancedSearchKeyword'),
+            advancedSearchFrom: document.getElementById('advancedSearchFrom'),
+            advancedSearchTo: document.getElementById('advancedSearchTo'),
+            advancedSearchLanguage: document.getElementById('advancedSearchLanguage'),
+            advancedSearchSortBy: document.getElementById('advancedSearchSortBy'),
+            advancedSearchButton: document.getElementById('advancedSearchButton'),
+            goToTop: document.getElementById('goToTop'),
+            loadingIndicator: document.getElementById('loadingIndicator')
+        };
+
+        // Event Listeners
+        elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+        elements.readingModeToggle.addEventListener('click', toggleReadingMode);
+        elements.notebookToggle.addEventListener('click', toggleNotebook);
+        elements.closeNotebook.addEventListener('click', toggleNotebook);
+        elements.searchButton.addEventListener('click', handleSearch);
+        elements.saveNotes.addEventListener('click', saveNotes);
+        elements.advancedSearchButton.addEventListener('click', () => {
+            elements.advancedSearchModal.style.display = 'flex';
+        });
+        elements.closeAdvancedSearch.addEventListener('click', () => {
+            elements.advancedSearchModal.style.display = 'none';
+        });
+        elements.executeAdvancedSearch.addEventListener('click', executeAdvancedSearch);
+
+        elements.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+
+        // Category buttons
+        elements.categories.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                fetchNews(`https://newsapi.org/v2/top-headlines?category=${button.dataset.category}&apiKey=${API_KEY}`);
+            });
+        });
+
+        // Go to Top Button
+        elements.goToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        window.addEventListener('scroll', () => {
+            if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+                elements.goToTop.style.display = "block";
+            } else {
+                elements.goToTop.style.display = "none";
+            }
+        });
+
+        // Feature Toggle Functions
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', darkMode);
+        }
+
+        function toggleReadingMode() {
+            readingMode = !readingMode;
+            document.body.classList.toggle('reading-mode');
+            localStorage.setItem('readingMode', readingMode);
+        }
+
+        function toggleNotebook() {
+            elements.notebookPanel.classList.toggle('open');
+        }
+
+        // News Functions
+        async function fetchNews(url) {
+            // Show loading indicator
+            elements.loadingIndicator.style.display = "block";
+            elements.newsGrid.innerHTML = ""; // Clear previous news
+
+            try {
+                const response = await fetch(CORS_PROXY + encodeURIComponent(url));
+                const data = await response.json();
+                const newsData = JSON.parse(data.contents);
+                
+                if (newsData.status === "ok") {
+                    displayNews(newsData.articles);
+                } else {
+                    console.error("Error fetching news:", newsData.message);
+                    elements.newsGrid.innerHTML = `
+                        <div class="col-span-full text-center text-gray-500">
+                            ${newsData.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error("Error fetching news:", error);
+                elements.newsGrid.innerHTML = `
+                    <div class="col-span-full text-center text-gray-500">
+                        Error loading news. Please try again later.
+                    </div>
+                `;
+            } finally {
+                // Hide loading indicator
+                elements.loadingIndicator.style.display = "none";
+            }
+        }
+
+        function displayNews(articles) {
+            elements.newsGrid.innerHTML = articles.filter(article => article.urlToImage).map(article => `
+                <article class="news-card">
+                    <img src="${article.urlToImage}" 
+                         alt="${article.title}"
+                         class="w-full h-48 object-cover">
+                    <div class="p-6">
+                        <span class="source-tag">${article.source.name}</span>
+                        <h3 class="text-xl font-bold mb-2">${article.title}</h3>
+                        <p class="text-gray-600 dark:text-gray-300 mb-4">${article.description || ''}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-500 bold-text">${new Date(article.publishedAt).toLocaleDateString()}</span>
+                            <div class="flex items-center space-x-2">
+                                <button class="bookmark-button feature-button" 
+                                        onclick="toggleBookmark('${article.url}')">
+                                    ${bookmarks.includes(article.url) ? '★' : '☆'}
+                                </button>
+                                <button class="share-button feature-button" 
+                                        onclick="shareArticle('${article.url}')">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                                <button class="text-to-speech feature-button" 
+                                        onclick="speakText('${article.title}. ${article.description || ''}')">
+                                    🔊
+                                </button>
+                                <a href="${article.url}" 
+                                   target="_blank" 
+                                   class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                    Read More
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function handleSearch() {
+            const query = elements.searchInput.value.trim();
+            if (query) {
+                fetchNews(`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${API_KEY}`);
+            }
+        }
+
+        function executeAdvancedSearch() {
+            const keyword = elements.advancedSearchKeyword.value.trim();
+            const fromDate = elements.advancedSearchFrom.value;
+            const toDate = elements.advancedSearchTo.value;
+            const language = elements.advancedSearchLanguage.value;
+            const sortBy = elements.advancedSearchSortBy.value;
+
+            // Construct advanced search URL
+            let url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keyword)}`;
+            
+            if (fromDate) url += `&from=${fromDate}`;
+            if (toDate) url += `&to=${toDate}`;
+            if (language) url += `&language=${language}`;
+            if (sortBy) url += `&sortBy=${sortBy}`;
+            url += `&apiKey=${API_KEY}`;
+
+            fetchNews(url);
+            elements.advancedSearchModal.style.display = 'none';
+        }
+
+        // Bookmark Functionality
+        function toggleBookmark(url) {
+            if (bookmarks.includes(url)) {
+                bookmarks = bookmarks.filter(bookmark => bookmark !== url);
+            } else {
+                bookmarks.push(url);
+            }
+            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+            displayNews(elements.newsGrid.innerHTML); // Refresh the news display
+        }
+
+        // Share Functionality
+        function shareArticle(url) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Check out this article!',
+                    url: url
+                }).catch(error => console.error('Error sharing:', error));
+            } else {
+                alert('Sharing not supported on this browser.');
+            }
+        }
+
+        // Text to Speech
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop any current speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Notes Functions
+        function saveNotes() {
+            const notes = elements.notesArea.value;
+            const blob = new Blob([notes], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'newsflash-notes.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchNews(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${API_KEY}`);
+
+            // Load saved notes if any
+            const savedNotes = localStorage.getItem('newsflash-notes');
+            if (savedNotes) {
+                elements.notesArea.value = savedNotes;
+            }
+
+            // Auto-save notes periodically
+            elements.notesArea.addEventListener('input', () => {
+                localStorage.setItem('newsflash-notes', elements.notesArea.value);
+            });
+
+            // Handle text selection for note-taking
+            document.addEventListener('mouseup', () => {
+                const selectedText = window.getSelection().toString().trim();
+                if (selectedText && elements.notebookPanel.classList.contains('open')) {
+                    const currentNotes = elements.notesArea.value;
+                    elements.notesArea.value = currentNotes + (currentNotes ? '\n\n' : '') + selectedText;
+                    localStorage.setItem('newsflash-notes', elements.notesArea.value);
+                }
+            });
+
+            // Error handling for images
+            document.addEventListener('error', (e) => {
+                if (e.target.tagName.toLowerCase() === 'img') {
+                    e.target.src = '/api/placeholder/400/200';
+                }
+            }, true);
+        });
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + D for dark mode
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                toggleDarkMode();
+            }
+            // Ctrl/Cmd + R for reading mode
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                toggleReadingMode();
+            }
+            // Ctrl/Cmd + N for notebook
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                toggleNotebook();
+            }
+            // Esc to close notebook
+            if (e.key === 'Escape' && elements.notebookPanel.classList.contains('open')) {
+                toggleNotebook();
+            }
+        });
+
+        // Handle offline/online status
+        window.addEventListener('online', () => {
+            const currentQuery = elements.searchInput.value.trim();
+            if (currentQuery) {
+                handleSearch();
+            } else {
+                fetchNews(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${API_KEY}`);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            elements.newsGrid.innerHTML = `
+                <div class="col-span-full text-center text-gray-500">
+                    You are currently offline. Please check your internet connection.
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
